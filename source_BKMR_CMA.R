@@ -5,13 +5,13 @@
 
 ##### function to calculate mean/median/CI/sd of a vector of posterior/bootstrap samples
 
-postresults <- function(posteriorsamp){
+postresults <- function(posteriorsamp, alpha){
   toreturn <- vector()
   toreturn["mean"]   <- mean(posteriorsamp, na.rm=TRUE)
   toreturn["sd"]     <- sd(posteriorsamp, na.rm=TRUE)
-  toreturn["lower"]  <- quantile(posteriorsamp, probs=0.025, na.rm=TRUE)
+  toreturn["lower"]  <- quantile(posteriorsamp, probs=alpha/2, na.rm=TRUE)
   toreturn["median"]  <- quantile(posteriorsamp, probs=0.5, na.rm=TRUE)
-  toreturn["upper"] <- quantile(posteriorsamp, probs=0.975, na.rm=TRUE)
+  toreturn["upper"] <- quantile(posteriorsamp, probs=1-alpha/2, na.rm=TRUE)
   return(toreturn)
 }
 
@@ -21,7 +21,7 @@ postresults <- function(posteriorsamp){
 ##########################################################
 
 
-TE.bkmr <- function(a, astar, fit.y.TE, X.predict, sel, seed){
+TE.bkmr <- function(a, astar, fit.y.TE, X.predict, alpha=0.05, sel, seed){
   toreturn <- list()
   
   set.seed(seed)
@@ -35,7 +35,7 @@ TE.bkmr <- function(a, astar, fit.y.TE, X.predict, sel, seed){
   toreturn$Ya.samp     <- as.vector(Ya) 
   toreturn$Yastar.samp <- as.vector(Yastar) 
   
-  TE.sum <- postresults(toreturn$TE)
+  TE.sum <- postresults(toreturn$TE, alpha=alpha)
   toreturn$est  <- TE.sum[c("mean","median","lower","upper")]
   return(toreturn)
 }
@@ -47,7 +47,7 @@ TE.bkmr <- function(a, astar, fit.y.TE, X.predict, sel, seed){
 ##########################################################
 
 
-CDE.bkmr <- function(a, astar, m.quant, fit.y, X.predict=rep(0,ncol(fit.y$X)), sel, seed){
+CDE.bkmr <- function(a, astar, m.quant, fit.y, X.predict=rep(0,ncol(fit.y$X)), alpha=0.05, sel, seed){
   toreturn <- list()
   m <- fit.y$Z[,ncol(fit.y$Z)]  ### okay as long as m is the LAST variable in Zm
   Z <- fit.y$Z[,-ncol(fit.y$Z)]
@@ -66,7 +66,7 @@ CDE.bkmr <- function(a, astar, m.quant, fit.y, X.predict=rep(0,ncol(fit.y$X)), s
     
     CDE <- as.vector(Yam - Yastarm)
     toreturn[[paste0("CDE",m.quant[i]*100,".samp")]] <- CDE
-    toreturn$est[paste0("CDE",m.quant[i]*100),] <- postresults(CDE)[c("mean","median","lower","upper")]
+    toreturn$est[paste0("CDE",m.quant[i]*100),] <- postresults(CDE, alpha=alpha)[c("mean","median","lower","upper")]
   }
   
   return(toreturn)
@@ -116,17 +116,17 @@ YaMastar.SamplePred <- function(a, astar, fit.m, fit.y, X.predict.M, X.predict.Y
 ##########################################################
 
 
-mediation.bkmr <- function(a, astar, m.quant=c(0.25,0.5,0.75), fit.m, fit.y, fit.y.TE, X.predict.M, X.predict.Y, sel, seed, K){
+mediation.bkmr <- function(a.Y, astar.Y, astar.M, m.quant=c(0.25,0.5,0.75), fit.m, fit.y, fit.y.TE, X.predict.M, X.predict.Y, alpha = 0.05, sel, seed, K){
   
   toreturn <- list()
   
-  TE <- TE.bkmr(a=a, astar=astar, fit.y.TE=fit.y.TE, X.predict=X.predict.Y, sel=sel, seed=(seed+100))
+  TE <- TE.bkmr(a=a.Y, astar=astar.Y, fit.y.TE=fit.y.TE, X.predict=X.predict.Y, alpha=alpha, sel=sel, seed=(seed+100))
   
   Ya     <- TE$Ya.samp
   Yastar <- TE$Yastar.samp
   
   
-  YaMastar <- YaMastar.SamplePred(a=a, astar=astar, fit.m=fit.m, fit.y=fit.y,
+  YaMastar <- YaMastar.SamplePred(a=a.Y, astar=astar.M, fit.m=fit.m, fit.y=fit.y,
                                         X.predict.M=X.predict.M, X.predict.Y=X.predict.Y, sel=sel, seed=seed, K=K)
   
   NDE <- YaMastar - Yastar
@@ -138,9 +138,9 @@ mediation.bkmr <- function(a, astar, m.quant=c(0.25,0.5,0.75), fit.m, fit.y, fit
   toreturn$NIE.samp <- NIE
   
   toreturn$est <- matrix(NA, nrow=3, ncol=4, dimnames=list(c("TE","NDE","NIE"), c("mean","median","lower","upper")))
-  toreturn$est[c("TE","NDE","NIE"),] <- rbind(postresults(TE$TE.samp) [c("mean","median","lower","upper")],
-                                              postresults(NDE)[c("mean","median","lower","upper")],
-                                              postresults(NIE)[c("mean","median","lower","upper")])
+  toreturn$est[c("TE","NDE","NIE"),] <- rbind(postresults(TE$TE.samp, alpha=alpha) [c("mean","median","lower","upper")],
+                                              postresults(NDE, alpha=alpha)[c("mean","median","lower","upper")],
+                                              postresults(NIE, alpha=alpha)[c("mean","median","lower","upper")])
   
   return(toreturn)
 }

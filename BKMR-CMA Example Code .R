@@ -103,7 +103,7 @@ X.predict <- matrix(colMeans(X),nrow=1)
 ## fixing age at testing to its 10th and 90th percentiles 
 ## However, this contrast can be anything. 
 
-## if modifiers are considered, you should fix the levels of the modifiers 
+## *** if modifiers are considered, you should fix the levels of the modifiers ***
 
 astar.age10 <- c(apply(A, 2, quantile, probs=0.25), quantile(E.Y, probs=0.1))
 astar.age90 <- c(apply(A, 2, quantile, probs=0.25), quantile(E.Y, probs=0.9))
@@ -123,7 +123,7 @@ sel<-seq(5001,20000,by=15)
 
 ## estimate the TE for a change in the exposures from astar to a
 ## fixing age at testing to its 10th percentile 
-TE.age10 <- TE.bkmr(a=a.age10, astar=astar.age10, fit.y.TE=fit.y.TE, X.predict=X.predict, sel=sel, seed=122)
+TE.age10 <- TE.bkmr(a=a.age10, astar=astar.age10, fit.y.TE=fit.y.TE, X.predict=X.predict, alpha=0.05, sel=sel, seed=122)
 
 ## look at the posterior mean, median, and 95% CI for TE
 TE.age10$est
@@ -146,7 +146,7 @@ TE.age90$est
 ## estimate the CDE for a change in the exposures from astar to a,
 ## fixing the mediator at its 10th, 50th, and 75th percentile and
 ## age at testing at its 10th percentile 
-CDE.age10 <- CDE.bkmr(a=a.age10, astar=astar.age10, m.quant=c(0.1,0.5,0.75), fit.y=fit.y, sel=sel, seed=777)
+CDE.age10 <- CDE.bkmr(a=a.age10, astar=astar.age10, m.quant=c(0.1,0.5,0.75), fit.y=fit.y, alpha=0.05, sel=sel, seed=777)
 
 ## look at the posterior mean, median, and 95% CI for the CDEs 
 CDE.age10$est
@@ -160,12 +160,16 @@ CDE.age10$est
 ## estimate the TE, NDE and NIE for a change in the exposures from astar to a
 ## fixing age at testing to its 90th percentile
 
-## *** NOTE: if the same confounders are used in both the mediation and outcome models, 
-## X.predict.M and X.predict.Y are the same
+## *** NOTE ***
+## 1) if the same confounders are used in both the mediation and outcome models, 
+##    X.predict.M and X.predict.Y are the same
+## 2) If no modifiers are included in your analysis or if E.M and E.Y are the same, 
+##    then astar.M and astar.Y are the same
+## *************
 
 ## *** this step takes a while to run and will take longer for more complex bkmr fits, longer sel vectors and larger K
-mediationeffects.age90 <- mediation.bkmr(a=a.age90, astar=astar.age90, fit.m=fit.m, fit.y=fit.y, fit.y.TE=fit.y.TE,
-                                      X.predict.M=X.predict, X.predict.Y=X.predict, sel=sel, seed=22, K=1000)
+mediationeffects.age90 <- mediation.bkmr(a.Y=a.age90, astar.Y=astar.age90, astar.M=astar, fit.m=fit.m, fit.y=fit.y, fit.y.TE=fit.y.TE,
+                                      X.predict.M=X.predict, X.predict.Y=X.predict, alpha=0.05, sel=sel, seed=22, K=1000)
 ## save this object
 save(mediationeffects.age90, file="mediationeffects_age90.RData")
 
